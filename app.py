@@ -1,5 +1,4 @@
 import os
-import asyncio
 import threading
 from flask import Flask
 from telegram import Update
@@ -9,6 +8,10 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 app = Flask(__name__)
 
+telegram_app = None
+bot_started = False
+
+
 @app.route("/")
 def home():
     return "Mapla AI Bot is Running 🔥"
@@ -16,29 +19,34 @@ def home():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🔥 Vanakkam Mapla!\n\nPolymarket AI Bot is Online!"
+        "🔥 Vanakkam Mapla!\n\nBot is Working Successfully!"
     )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "/start - Start the bot\n/help - Help"
+        "/start\n/help"
     )
 
 
-def telegram_bot():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+def start_bot():
+    global telegram_app
 
-    application = Application.builder().token(BOT_TOKEN).build()
+    telegram_app = Application.builder().token(BOT_TOKEN).build()
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
+    telegram_app.add_handler(CommandHandler("start", start))
+    telegram_app.add_handler(CommandHandler("help", help_command))
 
-    application.run_polling(close_loop=False)
+    telegram_app.run_polling()
 
 
-threading.Thread(target=telegram_bot, daemon=True).start()
+@app.before_request
+def run_once():
+    global bot_started
+
+    if not bot_started:
+        threading.Thread(target=start_bot, daemon=True).start()
+        bot_started = True
 
 
 if __name__ == "__main__":
